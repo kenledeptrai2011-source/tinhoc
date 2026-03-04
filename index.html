@@ -3,34 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tin Học 9 - Thế giới kĩ thuật số</title>
+    <title>Tin Học 9 - Chinh Phục Công Nghệ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
         body { font-family: 'Quicksand', sans-serif; background: #020617; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; overflow: hidden; }
         #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-        #fire-border { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; box-shadow: inset 0 0 0px rgba(239, 68, 68, 0); transition: box-shadow 1s ease; }
         .glass { background: rgba(255, 255, 255, 0.98); border-radius: 32px; box-shadow: 0 0 50px rgba(59, 130, 246, 0.2); border: 4px solid #3b82f6; position: relative; z-index: 10; }
-        .btn-option { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid #f1f5f9; }
-        .btn-option:hover:not(:disabled) { border-color: #3b82f6; background-color: #eff6ff; transform: translateY(-2px); }
-        .buff-card { transition: all 0.2s; cursor: pointer; position: relative; border: 2px solid #f1f5f9; }
-        .buff-card:hover:not(.disabled) { transform: scale(1.05); background: #f8fafc; border-color: #3b82f6; }
-        .buff-card.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
-        .buff-count { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 999px; font-weight: bold; }
-        .achievement-toast { position: fixed; top: 20px; right: 20px; background: #1e293b; color: #fff; padding: 16px; border-radius: 20px; border-left: 6px solid #a855f7; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 1000; transform: translateX(150%); transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        
+        /* Hiệu ứng Buff */
+        .buff-card { transition: all 0.3s; cursor: pointer; border: 2px solid #f1f5f9; opacity: 0.4; filter: grayscale(1); }
+        .buff-card.available { opacity: 1; filter: none; border-color: #3b82f6; background: #fff; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2); }
+        .buff-card.active { animation: pulse-blue 1.5s infinite; background: #eff6ff; }
+        @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
+
+        .achievement-toast { position: fixed; top: 20px; right: 20px; background: #1e293b; color: #fff; padding: 16px; border-radius: 20px; border-left: 6px solid #a855f7; z-index: 1000; transform: translateX(150%); transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
         .achievement-toast.show { transform: translateX(0); }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
-        @keyframes pulse-gold { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
-        .active-buff { animation: pulse-gold 1.5s infinite; border-color: #3b82f6 !important; background: #eff6ff !important; }
-        .timer-critical { color: #ef4444; transform: scale(1.2); animation: pulse-red 0.5s infinite alternate; }
-        #achievements-list::-webkit-scrollbar { width: 6px; }
-        #achievements-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
     </style>
 </head>
 <body>
-    <div id="fire-border"></div>
     <canvas id="particle-canvas"></canvas>
-
     <audio id="achievement-sound" src="Challenge_complete.mp3" preload="auto"></audio>
 
     <div id="achievement-toast" class="achievement-toast flex items-center gap-4">
@@ -41,83 +34,59 @@
         </div>
     </div>
 
-    <div id="achievements-modal" class="modal-overlay" onclick="closeAchievements()">
-        <div class="glass w-full max-w-xl p-8 m-4 max-h-[85vh] overflow-hidden flex flex-col" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">🏆 Bảng Thành Tựu</h2>
-                    <span id="achievement-progress" class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-xs font-bold">0/20</span>
-                </div>
-                <button onclick="closeAchievements()" class="text-slate-400 hover:text-black text-2xl">✕</button>
-            </div>
-            <div id="achievements-list" class="grid grid-cols-1 gap-3 overflow-y-auto pr-2"></div>
-        </div>
-    </div>
-
     <div id="game-container" class="glass w-full max-w-3xl p-6 md:p-8 mx-4">
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h1 id="level-title" class="text-xl font-black text-blue-600 uppercase leading-none">Tin Học 9</h1>
+                <h1 class="text-xl font-black text-blue-600 uppercase">Tin Học 9</h1>
                 <p class="text-[10px] text-gray-400 font-mono italic">Thế giới kĩ thuật số</p>
             </div>
             <div class="text-right">
-                <div class="text-3xl font-black text-emerald-600 flex items-center justify-end gap-1">
-                    <span id="total-score">0</span><span class="text-sm uppercase">đ</span>
-                </div>
-                <div id="combo-display" class="text-xl font-bold hidden transition-all">🔥 x0</div>
+                <div class="text-3xl font-black text-emerald-600"><span id="total-score">0</span>đ</div>
+                <div id="combo-display" class="text-xl font-bold text-orange-500 hidden">🔥 x0</div>
             </div>
         </div>
 
-        <div id="start-screen" class="text-center py-4">
+        <div id="start-screen" class="text-center py-10">
             <div class="text-8xl mb-6">💻</div>
-            <h2 class="text-3xl font-black mb-2 text-slate-800 uppercase">CHINH PHỤC CÔNG NGHỆ</h2>
-            <p class="text-gray-500 mb-8 font-medium italic">Bạn đã sẵn sàng để trở thành chuyên gia?</p>
-            <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                <button onclick="startGame()" class="bg-blue-600 hover:bg-blue-700 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-[0_8px_0_rgb(30,58,138)] active:translate-y-1 active:shadow-none transition-all uppercase">BẮT ĐẦU</button>
-                <button onclick="openAchievements()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-5 rounded-2xl font-black text-xl shadow-lg transition-all uppercase">🏆 THÀNH TỰU</button>
-            </div>
+            <button onclick="startGame()" class="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-[0_8px_0_rgb(30,58,138)] active:translate-y-1 active:shadow-none transition-all">BẮT ĐẦU</button>
         </div>
 
         <div id="quiz-screen" class="hidden">
             <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
-                <div onclick="useBuff('skip')" id="buff-skip" class="buff-card bg-white p-2 rounded-xl text-center">
-                    <div id="skip-count" class="buff-count">2</div>
+                <div onclick="useBuff('skip')" id="buff-skip" class="buff-card p-2 rounded-xl text-center">
                     <div class="text-lg">⏭️</div>
                     <div class="text-[8px] font-bold uppercase">Bỏ qua</div>
+                    <div class="text-[10px] text-blue-600 font-black">5đ</div>
                 </div>
-                <div onclick="useBuff('hint')" id="buff-hint" class="buff-card bg-white p-2 rounded-xl text-center">
+                <div onclick="useBuff('hint')" id="buff-hint" class="buff-card p-2 rounded-xl text-center">
                     <div class="text-lg">🌓</div>
                     <div class="text-[8px] font-bold uppercase">50/50</div>
+                    <div class="text-[10px] text-blue-600 font-black">5đ</div>
                 </div>
-                <div onclick="useBuff('double')" id="buff-double" class="buff-card bg-white p-2 rounded-xl text-center">
+                <div onclick="useBuff('double')" id="buff-double" class="buff-card p-2 rounded-xl text-center">
                     <div class="text-lg">⚡</div>
                     <div class="text-[8px] font-bold uppercase">x2 Điểm</div>
+                    <div class="text-[10px] text-blue-600 font-black">5đ</div>
                 </div>
-                <div onclick="useBuff('shield')" id="buff-shield" class="buff-card bg-white p-2 rounded-xl text-center">
+                <div onclick="useBuff('shield')" id="buff-shield" class="buff-card p-2 rounded-xl text-center">
                     <div class="text-lg">🛡️</div>
                     <div class="text-[8px] font-bold uppercase">Khiên</div>
+                    <div class="text-[10px] text-blue-600 font-black">3đ</div>
                 </div>
-                <div onclick="useBuff('addTime')" id="buff-addTime" class="buff-card bg-white p-2 rounded-xl text-center">
+                <div onclick="useBuff('addTime')" id="buff-addTime" class="buff-card p-2 rounded-xl text-center">
                     <div class="text-lg">⏳</div>
                     <div class="text-[8px] font-bold uppercase">+5s</div>
+                    <div class="text-[10px] text-blue-600 font-black">4đ</div>
                 </div>
-                <div onclick="useBuff('passivePts')" id="buff-passivePts" class="buff-card bg-white p-2 rounded-xl text-center">
+                <div onclick="useBuff('passivePts')" id="buff-passivePts" class="buff-card p-2 rounded-xl text-center">
                     <div class="text-lg">💎</div>
                     <div class="text-[8px] font-bold uppercase">Thụ Động</div>
+                    <div class="text-[10px] text-blue-600 font-black">5đ</div>
                 </div>
-                <div onclick="useBuff('restoreCombo')" id="buff-restoreCombo" class="buff-card bg-white p-2 rounded-xl text-center">
+                <div onclick="useBuff('restoreCombo')" id="buff-restoreCombo" class="buff-card p-2 rounded-xl text-center">
                     <div class="text-lg">🔥</div>
                     <div class="text-[8px] font-bold uppercase">Hồi Chuỗi</div>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <div class="flex justify-between items-end mb-2">
-                    <span id="question-counter" class="text-sm font-black text-slate-400 uppercase">MÀN 1 - CÂU 1/10</span>
-                    <span id="question-timer" class="bg-slate-800 text-white px-3 py-1 rounded-full font-black text-sm">30s</span>
-                </div>
-                <div class="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                    <div id="progress-fill" class="h-full bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+                    <div class="text-[10px] text-blue-600 font-black">5đ</div>
                 </div>
             </div>
 
@@ -125,253 +94,158 @@
                 <h3 id="question-text" class="text-xl font-bold text-slate-800 mb-6 min-h-[60px]">...</h3>
                 <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
             </div>
-            <div id="feedback" class="hidden p-4 mt-6 rounded-2xl text-center font-black"></div>
-        </div>
-
-        <div id="result-screen" class="hidden text-center py-6">
-            <h2 class="text-4xl font-black mb-4 text-slate-800 uppercase">KẾT THÚC!</h2>
-            <div class="bg-slate-50 p-6 rounded-3xl mb-8 border-2 border-slate-100">
-                <div id="final-score" class="text-6xl font-black text-blue-600">0</div>
-                <p class="text-gray-400 font-bold uppercase text-xs mt-2">Tổng điểm đạt được</p>
-            </div>
-            <button onclick="location.reload()" class="bg-slate-800 text-white px-10 py-4 rounded-2xl font-black text-xl shadow-lg transition-all uppercase">CHƠI LẠI</button>
+            <div id="feedback" class="hidden p-4 mt-6 rounded-2xl text-center font-black text-white"></div>
         </div>
     </div>
 
     <script>
-        const LEVEL_1 = [
-            { q: "Hệ điều hành là gì?", options: ["Một thiết bị phần cứng", "Phần mềm ứng dụng giải trí", "Phần mềm hệ thống quản lý tài nguyên máy tính", "Trình duyệt web"], correct: 2 },
-            { q: "Phần mềm nào sau đây là Hệ điều hành?", options: ["Microsoft Word", "Windows 10", "Google Chrome", "Adobe Photoshop"], correct: 1 },
-            { q: "Hệ điều hành cho điện thoại di động phổ biến nhất hiện nay là?", options: ["Linux", "Windows 7", "Android", "MS-DOS"], correct: 2 },
-            { q: "Phần mềm ứng dụng là phần mềm giúp người dùng?", options: ["Quản lý phần cứng máy tính", "Thực hiện một công việc cụ thể", "Bật/Tắt máy tính", "Kết nối bàn phím"], correct: 1 },
-            { q: "Chức năng chính của hệ điều hành là?", options: ["Quản lý thiết bị và phần mềm", "Tạo ra văn bản", "Chỉnh sửa hình ảnh", "Gửi thư điện tử"], correct: 0 },
-            { q: "Đâu là phần mềm mã nguồn mở?", options: ["Windows 11", "Microsoft Office", "Hệ điều hành Linux", "iOS"], correct: 2 },
-            { q: "Biểu tượng của hệ điều hành Android là hình gì?", options: ["Quả táo", "Cửa sổ", "Con chim cánh cụt", "Robot màu xanh"], correct: 3 },
-            { q: "Phần mềm nào là phần mềm ứng dụng?", options: ["Windows", "MacOS", "Zalo", "Android"], correct: 2 },
-            { q: "Giao diện GUI là loại giao diện gì?", options: ["Giao diện dòng lệnh", "Giao diện đồ họa người dùng", "Giao diện bằng giọng nói", "Giao diện bằng chữ viết"], correct: 1 },
-            { q: "Thiết bị nào sau đây KHÔNG cần hệ điều hành để hoạt động cơ bản?", options: ["Điện thoại thông minh", "Máy tính xách tay", "Bàn phím máy tính", "Máy tính bảng"], correct: 2 }
+        const QUESTIONS = [
+            { q: "Hệ điều hành là gì?", options: ["Phần cứng", "Phần mềm ứng dụng", "Phần mềm hệ thống", "Trình duyệt"], correct: 2 },
+            { q: "Windows 10 là gì?", options: ["Trình duyệt", "Hệ điều hành", "Phần cứng", "Ứng dụng chat"], correct: 1 },
+            { q: "Hệ điều hành phổ biến trên di động?", options: ["Windows", "Linux", "Android", "DOS"], correct: 2 },
+            { q: "Zalo là loại phần mềm gì?", options: ["Hệ điều hành", "Phần mềm ứng dụng", "Phần cứng", "Mã nguồn mở"], correct: 1 }
         ];
 
         let state = {
-            level: 1, currentQ: 0, score: 0, combo: 0, maxCombo: 0, 
-            lastComboBeforeBreak: 0, canAnswer: true, timer: null, timeLeft: 30,
-            skipRemaining: 2, isDouble: false, isShield: false,
-            isPassiveActive: false, passiveTimer: null,
-            unlockedAchievements: new Set(JSON.parse(localStorage.getItem('tin9_ach_v2') || '[]')),
-            buffsUsedThisGame: new Set(), buffUsageCount: 0, correctCount: 0, perfectSpeedCount: 0,
-            firstPlay: localStorage.getItem('played_before') ? false : true
+            currentQ: 0, score: 0, combo: 0, lastCombo: 0,
+            canAnswer: true, isDouble: false, isShield: false,
+            unlocked: new Set(JSON.parse(localStorage.getItem('tin9_final_ach') || '[]')),
+            correctTotal: 0
         };
 
-        const BUFFS = { skip: 5, hint: 5, double: 5, shield: 3, addTime: 4, passivePts: 5, restoreCombo: 5 };
+        const BUFF_PRICES = { skip: 5, hint: 5, double: 5, shield: 3, addTime: 4, passivePts: 5, restoreCombo: 5 };
 
-        const ACHIEVEMENT_LIST = [
-            { id: 'rookie', title: 'Tân binh mới nhú', desc: 'Trả lời đúng câu hỏi đầu tiên trong lần chơi đầu tiên', icon: '🔰', condition: s => s.currentQ === 0 && s.level === 1 && s.correctCount === 1 && s.firstPlay },
-            { id: 'combo3', title: 'Khởi đầu tốt', desc: 'Đạt chuỗi Combo x3', icon: '🥉', condition: s => s.combo >= 3 },
-            { id: 'combo5', title: 'Tay chơi ổn định', desc: 'Đạt chuỗi Combo x5', icon: '🥈', condition: s => s.combo >= 5 },
-            { id: 'combo10', title: 'Chuỗi Hủy Diệt', desc: 'Đạt chuỗi Combo x10', icon: '🔥', condition: s => s.combo >= 10 },
-            { id: 'combo15', title: 'Bất Khả Chiến Bại', desc: 'Đạt chuỗi Combo x15', icon: '⚡', condition: s => s.combo >= 15 },
-            { id: 'combo20', title: 'Vô Đối', desc: 'Đạt chuỗi Combo x20', icon: '🌌', condition: s => s.combo >= 20 },
-            { id: 'rich', title: 'Đại Gia Buff', desc: 'Sử dụng 10 Buff trong một ván chơi', icon: '💸', condition: s => s.buffUsageCount >= 10 },
-            { id: 'shield_user', title: 'Vệ Sĩ Công Nghệ', desc: 'Dùng khiên bảo vệ thành công', icon: '🛡️', condition: s => s.buffsUsedThisGame.has('shield') },
-            { id: 'flash', title: 'Phản Xạ Thần Thánh', desc: 'Đúng 5 câu dưới 2 giây', icon: '🏹', condition: s => s.perfectSpeedCount >= 5 },
-            { id: 'score100', title: 'Bậc Thầy Học Thuật', desc: 'Đạt trên 100 điểm', icon: '🎓', condition: s => s.score >= 100 },
-            { id: 'score200', title: 'Vua Kĩ Thuật Số', desc: 'Đạt trên 200 điểm', icon: '👑', condition: s => s.score >= 200 },
-            { id: 'perfect_lv1', title: 'Sạch Sẽ', desc: 'Hoàn thành Màn 1 không sai câu nào', icon: '🧹', condition: s => s.level > 1 && s.correctCount >= 10 },
-            { id: 'restorer', title: 'Hồi Sinh', desc: 'Khôi phục chuỗi Combo đã mất', icon: '🕯️', condition: s => s.buffsUsedThisGame.has('restoreCombo') },
-            { id: 'passive_rich', title: 'Thu Nhập Thụ Động', desc: 'Kích hoạt buff kim cương', icon: '💎', condition: s => s.isPassiveActive },
-            { id: 'night_owl', title: 'Cú Đêm', desc: 'Chơi game vào lúc nửa đêm (22h-4h)', icon: '🦉', condition: () => { const h = new Date().getHours(); return h >= 22 || h <= 4; } },
-            { id: 'speed_runner', title: 'Thần Gió', desc: 'Hoàn thành 1 câu trong 1 giây', icon: '🌪️', condition: s => s.perfectSpeedCount >= 1 },
-            { id: 'lucky', title: 'Số Hưởng', desc: 'Dùng 50/50 trúng ngay câu khó', icon: '🍀', condition: s => s.buffsUsedThisGame.has('hint') },
-            { id: 'double_kill', title: 'Nhân Đôi Sức Mạnh', desc: 'Dùng x2 điểm và trả lời đúng', icon: '⚔️', condition: s => s.isDouble && s.correctCount > 0 },
-            { id: 'collector', title: 'Nhà Sưu Tầm', desc: 'Mở khóa 10 thành tựu khác nhau', icon: '🎒', condition: s => s.unlockedAchievements.size >= 10 },
-            { id: 'legend', title: 'Huyền Thoại Tin Học', desc: 'Mở khóa tất cả thành tựu', icon: '💠', condition: s => s.unlockedAchievements.size >= 19 }
+        const ACHS = [
+            { id: 'combo3', title: 'Khởi đầu tốt', icon: '🥉', condition: s => s.combo >= 3 },
+            { id: 'combo5', title: 'Tay chơi ổn định', icon: '🥈', condition: s => s.combo >= 5 },
+            { id: 'combo10', title: 'Chuỗi Hủy Diệt', icon: '🔥', condition: s => s.combo >= 10 },
+            { id: 'combo15', title: 'Bất Khả Chiến Bại', icon: '⚡', condition: s => s.combo >= 15 },
+            { id: 'combo20', title: 'Huyền Thoại Chuỗi', icon: '🌌', condition: s => s.combo >= 20 },
+            { id: 'rookie', title: 'Tân binh mới nhú', icon: '🔰', condition: s => s.currentQ === 0 && s.correctTotal === 1 }
         ];
 
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('quiz-screen').classList.remove('hidden');
-            
-            // Mở khóa âm thanh (Mẹo cho trình duyệt)
-            const sound = document.getElementById('achievement-sound');
-            sound.play().then(() => { sound.pause(); sound.currentTime = 0; }).catch(() => {});
-            
+            // Mồi âm thanh cho trình duyệt
+            const snd = document.getElementById('achievement-sound');
+            snd.play().then(() => { snd.pause(); snd.currentTime = 0; }).catch(() => {});
             loadQuestion();
-            updateScoreUI();
-            localStorage.setItem('played_before', 'true');
         }
 
         function loadQuestion() {
-            const q = LEVEL_1[state.currentQ];
-            state.canAnswer = true; state.timeLeft = 30; state.isDouble = false; state.isShield = false;
-            document.getElementById('question-counter').innerText = `MÀN 1 - CÂU ${state.currentQ + 1}/10`;
+            state.canAnswer = true; state.isDouble = false; state.isShield = false;
+            const q = QUESTIONS[state.currentQ % QUESTIONS.length];
             document.getElementById('question-text').innerText = q.q;
-            document.getElementById('progress-fill').style.width = `${(state.currentQ / 10) * 100}%`;
-            document.getElementById('feedback').classList.add('hidden');
             const grid = document.getElementById('options-grid');
             grid.innerHTML = '';
             q.options.forEach((opt, i) => {
                 const btn = document.createElement('button');
-                btn.className = "btn-option w-full p-4 rounded-2xl font-bold bg-white text-left flex items-center gap-4 shadow-sm";
-                btn.innerHTML = `<span class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-black">${String.fromCharCode(65+i)}</span> <span>${opt}</span>`;
+                btn.className = "btn-option w-full p-4 rounded-2xl font-bold bg-white text-left border-2 border-slate-100 hover:border-blue-500 transition-all";
+                btn.innerText = `${String.fromCharCode(65+i)}. ${opt}`;
                 btn.onclick = () => checkAnswer(i);
                 grid.appendChild(btn);
             });
-            startTimer();
-            updateBuffUI();
-        }
-
-        function startTimer() {
-            if (state.timer) clearInterval(state.timer);
-            state.timer = setInterval(() => {
-                state.timeLeft--;
-                document.getElementById('question-timer').innerText = `${state.timeLeft}s`;
-                if(state.timeLeft <= 5) document.getElementById('question-timer').classList.add('timer-critical');
-                else document.getElementById('question-timer').classList.remove('timer-critical');
-                if (state.timeLeft <= 0) { clearInterval(state.timer); checkAnswer(-1); }
-            }, 1000);
+            updateUI();
         }
 
         function checkAnswer(idx) {
             if (!state.canAnswer) return;
-            state.canAnswer = false; clearInterval(state.timer);
-            const q = LEVEL_1[state.currentQ];
+            state.canAnswer = false;
+            const q = QUESTIONS[state.currentQ % QUESTIONS.length];
             const isCorrect = idx === q.correct;
             const fb = document.getElementById('feedback');
             fb.classList.remove('hidden');
-            
+
             if (isCorrect) {
-                if (state.timeLeft >= 28) state.perfectSpeedCount++; 
-                state.correctCount++;
+                state.correctTotal++;
                 let pts = 10; if (state.isDouble) pts *= 2;
                 state.score += pts; state.combo++;
                 fb.innerText = `CHÍNH XÁC! +${pts}đ`;
-                fb.className = "p-4 mt-6 rounded-2xl text-center font-black bg-emerald-500 text-white animate-bounce";
+                fb.style.background = "#10b981";
             } else {
                 if (state.isShield) {
                     fb.innerText = "🛡️ KHIÊN ĐÃ ĐỠ ĐÒN!";
-                    fb.className = "p-4 mt-6 rounded-2xl text-center font-black bg-blue-500 text-white";
+                    fb.style.background = "#3b82f6";
                 } else {
                     state.score = Math.max(0, state.score - 5);
-                    state.lastComboBeforeBreak = state.combo; state.combo = 0;
-                    fb.innerText = `SAI RỒI! Đáp án: ${q.options[q.correct]}`;
-                    fb.className = "p-4 mt-6 rounded-2xl text-center font-black bg-red-500 text-white";
+                    state.lastCombo = state.combo; state.combo = 0;
+                    fb.innerText = `SAI RỒI!`;
+                    fb.style.background = "#ef4444";
                 }
             }
-            updateScoreUI(); updateComboUI(); checkAchievements();
-            setTimeout(() => {
-                state.currentQ++;
-                if (state.currentQ < 10) loadQuestion();
-                else finishGame();
-            }, 1500);
+            updateUI();
+            checkAch();
+            setTimeout(() => { state.currentQ++; loadQuestion(); }, 1200);
         }
 
         function useBuff(type) {
-            if (!state.canAnswer || state.score < BUFFS[type]) return;
-            if (type === 'skip' && state.skipRemaining <= 0) return;
-            if (type === 'restoreCombo' && state.combo > 0) return;
+            const price = BUFF_PRICES[type];
+            if (!state.canAnswer || state.score < price) return;
+            state.score -= price;
             
-            state.score -= BUFFS[type]; state.buffUsageCount++; state.buffsUsedThisGame.add(type);
-            updateScoreUI();
-            if (type === 'skip') { state.skipRemaining--; nextQuestion(); }
-            else if (type === 'hint') {
-                const q = LEVEL_1[state.currentQ];
-                let hidden = 0;
-                document.querySelectorAll('.btn-option').forEach((btn, i) => {
-                    if (i !== q.correct && hidden < 2) { btn.style.opacity = '0.2'; btn.disabled = true; hidden++; }
-                });
-            }
+            if (type === 'skip') { state.currentQ++; loadQuestion(); }
             else if (type === 'double') state.isDouble = true;
             else if (type === 'shield') state.isShield = true;
-            else if (type === 'addTime') state.timeLeft += 5;
-            else if (type === 'passivePts') startPassive();
-            else if (type === 'restoreCombo') { state.combo = state.lastComboBeforeBreak; updateComboUI(); }
-            updateBuffUI();
+            else if (type === 'restoreCombo') { state.combo = state.lastCombo; state.lastCombo = 0; }
+            
+            updateUI();
         }
 
-        function startPassive() {
-            state.isPassiveActive = true;
-            let count = 0;
-            const t = setInterval(() => {
-                state.score += 0.5; updateScoreUI(); count++;
-                if(count >= 20) { clearInterval(t); state.isPassiveActive = false; updateBuffUI(); }
-            }, 1000);
-        }
+        function updateUI() {
+            document.getElementById('total-score').innerText = state.score;
+            const comboEl = document.getElementById('combo-display');
+            if (state.combo >= 3) { comboEl.classList.remove('hidden'); comboEl.innerText = `🔥 x${state.combo}`; }
+            else { comboEl.classList.add('hidden'); }
 
-        function updateScoreUI() { document.getElementById('total-score').innerText = Math.floor(state.score); }
-        
-        function updateBuffUI() {
-            Object.keys(BUFFS).forEach(key => {
-                const el = document.getElementById(`buff-${key}`);
-                if (state.score >= BUFFS[key]) el.classList.remove('disabled');
-                else el.classList.add('disabled');
-            });
-        }
-
-        function updateComboUI() {
-            const display = document.getElementById('combo-display');
-            if (state.combo < 3) { display.classList.add('hidden'); return; }
-            display.classList.remove('hidden'); display.innerText = `🔥 x${state.combo}`;
-        }
-
-        function checkAchievements() {
-            ACHIEVEMENT_LIST.forEach(ach => {
-                if (!state.unlockedAchievements.has(ach.id) && ach.condition(state)) {
-                    state.unlockedAchievements.add(ach.id);
-                    localStorage.setItem('tin9_ach_v2', JSON.stringify([...state.unlockedAchievements]));
-                    showToast(ach);
+            // Cập nhật trạng thái Phát sáng cho Buff
+            Object.keys(BUFF_PRICES).forEach(type => {
+                const el = document.getElementById(`buff-${type}`);
+                if (state.score >= BUFF_PRICES[type]) {
+                    el.classList.add('available');
+                } else {
+                    el.classList.remove('available', 'active');
+                }
+                if ((type === 'double' && state.isDouble) || (type === 'shield' && state.isShield)) {
+                    el.classList.add('active');
                 }
             });
         }
 
-        function showToast(ach) {
-            const sound = document.getElementById('achievement-sound');
-            if (sound) { sound.currentTime = 0; sound.play().catch(() => {}); }
-            const toast = document.getElementById('achievement-toast');
-            document.getElementById('achievement-name').innerText = ach.title;
-            document.getElementById('toast-icon').innerText = ach.icon;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 4000);
-        }
-
-        function openAchievements() {
-            const list = document.getElementById('achievements-list');
-            list.innerHTML = '';
-            ACHIEVEMENT_LIST.forEach(ach => {
-                const unlocked = state.unlockedAchievements.has(ach.id);
-                list.innerHTML += `<div class="p-4 rounded-2xl border-2 flex items-center gap-4 ${unlocked ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 opacity-40'}">
-                    <div class="text-3xl">${unlocked ? ach.icon : '❓'}</div>
-                    <div><div class="font-black">${unlocked ? ach.title : '???'}</div><div class="text-xs text-slate-500">${ach.desc}</div></div>
-                </div>`;
+        function checkAch() {
+            ACHS.forEach(a => {
+                if (!state.unlocked.has(a.id) && a.condition(state)) {
+                    state.unlocked.add(a.id);
+                    localStorage.setItem('tin9_final_ach', JSON.stringify([...state.unlocked]));
+                    showToast(a);
+                }
             });
-            document.getElementById('achievement-progress').innerText = `${state.unlockedAchievements.size}/20`;
-            document.getElementById('achievements-modal').style.display = 'flex';
         }
 
-        function closeAchievements() { document.getElementById('achievements-modal').style.display = 'none'; }
-        
-        function finishGame() {
-            document.getElementById('quiz-screen').classList.add('hidden');
-            document.getElementById('result-screen').classList.remove('hidden');
-            document.getElementById('final-score').innerText = Math.floor(state.score);
+        function showToast(a) {
+            const snd = document.getElementById('achievement-sound');
+            if (snd) { snd.currentTime = 0; snd.play().catch(e => console.log("Lỗi âm thanh:", e)); }
+            const t = document.getElementById('achievement-toast');
+            document.getElementById('achievement-name').innerText = a.title;
+            document.getElementById('toast-icon').innerText = a.icon;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 4000);
         }
 
-        // Particle Effect
+        // Hiệu ứng hạt nền
         const canvas = document.getElementById('particle-canvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
         window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
         window.onresize();
-
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (state.combo >= 3) {
-                particles.push({ x: Math.random() * canvas.width, y: canvas.height, vy: -Math.random() * 3 - 2, alpha: 1 });
-            }
+            if (state.combo >= 3) particles.push({ x: Math.random() * canvas.width, y: canvas.height, v: -Math.random()*3-1, a: 1 });
             particles.forEach((p, i) => {
-                p.y += p.vy; p.alpha -= 0.01;
-                ctx.globalAlpha = p.alpha; ctx.fillStyle = '#3b82f6';
+                p.y += p.v; p.a -= 0.01;
+                ctx.globalAlpha = p.a; ctx.fillStyle = '#3b82f6';
                 ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
-                if(p.alpha <= 0) particles.splice(i, 1);
+                if (p.a <= 0) particles.splice(i, 1);
             });
             requestAnimationFrame(animate);
         }
