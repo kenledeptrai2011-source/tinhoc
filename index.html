@@ -99,6 +99,9 @@
     <div id="fire-border"></div>
     <canvas id="particle-canvas"></canvas>
 
+    <!-- Thêm đối tượng Audio cho thành tựu -->
+    <audio id="achievement-sound" src="Challenge_complete.ogg" preload="auto"></audio>
+
     <!-- Achievement Toast -->
     <div id="achievement-toast" class="achievement-toast flex items-center gap-4">
         <div id="toast-icon" class="text-3xl">🏆</div>
@@ -131,7 +134,7 @@
             </div>
             <div class="text-right">
                 <div class="text-3xl font-black text-emerald-600 flex items-center justify-end gap-1">
-                    <span id="total-score">10</span><span class="text-sm uppercase">đ</span>
+                    <span id="total-score">0</span><span class="text-sm uppercase">đ</span>
                 </div>
                 <div id="combo-display" class="text-xl font-bold hidden transition-all">🔥 x0</div>
             </div>
@@ -262,7 +265,7 @@
 
         // --- QUẢN LÝ TRẠNG THÁI ---
         let state = {
-            level: 1, currentQ: 0, score: 10, combo: 0, maxCombo: 0, 
+            level: 1, currentQ: 0, score: 0, combo: 0, maxCombo: 0, 
             lastComboBeforeBreak: 0, canAnswer: true, timer: null, timeLeft: 30,
             skipRemaining: 2, isDouble: false, isShield: false,
             isPassiveActive: false, passiveTimer: null,
@@ -304,6 +307,14 @@
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('quiz-screen').classList.remove('hidden');
+            
+            // Kích hoạt âm thanh rỗng để trình duyệt cho phép phát tiếng sau này
+            const audio = document.getElementById('achievement-sound');
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+            }).catch(() => {});
+
             loadQuestion();
             updateScoreUI();
         }
@@ -376,7 +387,7 @@
                     fb.innerText = "🛡️ KHIÊN BẢO VỆ ĐÃ KÍCH HOẠT!";
                     fb.className = "p-4 mt-6 rounded-2xl text-center font-black bg-blue-500 text-white";
                 } else {
-                    state.score = Math.max(0, state.score - 5);
+                    state.score -= 5; // Xóa điểm sàn (Math.max(0, ...)), có thể về âm
                     if (state.combo > 0) state.lastComboBeforeBreak = state.combo;
                     state.combo = 0;
                     const msg = idx === -1 ? "HẾT GIỜ!" : "SAI RỒI!";
@@ -508,6 +519,13 @@
         }
 
         function showToast(ach) {
+            // Phát âm thanh hoàn thành thành tựu
+            const sound = document.getElementById('achievement-sound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("Audio play failed:", e));
+            }
+
             const toast = document.getElementById('achievement-toast');
             document.getElementById('achievement-name').innerText = ach.title;
             document.getElementById('toast-icon').innerText = ach.icon;
